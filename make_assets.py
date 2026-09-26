@@ -44,10 +44,6 @@ def bar_magnet():
     d.rectangle([x0, y0, x1, y1], outline=INK, width=4)
     d.line([mid, y0, mid, y1], fill=INK, width=4)
 
-    font = ImageFont.truetype(FONT_BOLD, 108)
-    for letter, cx in [("N", (x0 + mid) // 2), ("S", (mid + x1) // 2)]:
-        d.text((cx, (y0 + y1) // 2), letter, font=font, fill=WHITE, anchor="mm")
-
     path = os.path.join(OUT, "bar_magnet.png")
     trim_transparent(img).save(path)
     print("saved", path)
@@ -102,13 +98,6 @@ def horseshoe_magnet():
         + [(cx - r_in, y_top), (cx - r_out, y_top)]
     )
     d.line(outline, fill=INK, width=4, joint="curve")
-
-    font = ImageFont.truetype(FONT_BOLD, 58)
-    lx = cx - (r_out + r_in) // 2
-    rx = cx + (r_out + r_in) // 2
-    ly = (y_top + y_pole) // 2
-    d.text((lx, ly), "N", font=font, fill=INK, anchor="mm")
-    d.text((rx, ly), "S", font=font, fill=INK, anchor="mm")
 
     path = os.path.join(OUT, "horseshoe_magnet.png")
     trim_transparent(img).save(path)

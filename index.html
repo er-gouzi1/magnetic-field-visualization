@@ -649,19 +649,20 @@
     const img = assets.bar;
     if (img.complete && img.naturalWidth) {
       drawSprite(img, c.x, c.y, c.length, c.height, c.flip > 0);
-      return;
+    } else {
+      const L = c.length, h = c.height;
+      const x = c.x - L / 2, y = c.y - h / 2;
+      const Nright = c.flip > 0;
+      roundedRect(x, y, L / 2, h, 6);
+      ctx.fillStyle = Nright ? COL_S : COL_N;
+      ctx.fill();
+      roundedRect(x + L / 2, y, L / 2, h, 6);
+      ctx.fillStyle = Nright ? COL_N : COL_S;
+      ctx.fill();
     }
-    const L = c.length, h = c.height;
-    const x = c.x - L / 2, y = c.y - h / 2;
-    const Nright = c.flip > 0;
-    roundedRect(x, y, L / 2, h, 6);
-    ctx.fillStyle = Nright ? COL_S : COL_N;
-    ctx.fill();
-    roundedRect(x + L / 2, y, L / 2, h, 6);
-    ctx.fillStyle = Nright ? COL_N : COL_S;
-    ctx.fill();
-    label(x + L / 4, c.y + 1, Nright ? "S" : "N", 16, "#fff");
-    label(x + L * 3 / 4, c.y + 1, Nright ? "N" : "S", 16, "#fff");
+    const s = c.flip;
+    label(c.x + s * c.length / 4, c.y + 1, "N", 15, "#fff");
+    label(c.x - s * c.length / 4, c.y + 1, "S", 15, "#fff");
   }
 
   function drawSolenoid(c) {
@@ -698,20 +699,21 @@
     const img = assets.horseshoe;
     if (img.complete && img.naturalWidth) {
       drawSprite(img, c.x, c.y, HS_W, HS_H, c.flip < 0);
-      return;
+    } else {
+      const Nleft = c.flip > 0;
+      const armW = 22, armTop = c.y - 38, armBot = c.y + 26, bot = c.y + 48;
+      const leftX = c.x - 36 - armW / 2, rightX = c.x + 36 - armW / 2;
+      const leftCol = Nleft ? COL_N : COL_S;
+      const rightCol = Nleft ? COL_S : COL_N;
+      roundedRect(leftX, armTop, armW, armBot - armTop, 5); ctx.fillStyle = leftCol; ctx.fill();
+      roundedRect(rightX, armTop, armW, armBot - armTop, 5); ctx.fillStyle = rightCol; ctx.fill();
+      roundedRect(leftX, armBot - 4, (rightX + armW) - leftX, bot - armBot + 4, 6);
+      ctx.fillStyle = "#4b5361";
+      ctx.fill();
     }
-    const Nleft = c.flip > 0;
-    const armW = 22, armTop = c.y - 38, armBot = c.y + 26, bot = c.y + 48;
-    const leftX = c.x - 36 - armW / 2, rightX = c.x + 36 - armW / 2;
-    const leftCol = Nleft ? COL_N : COL_S;
-    const rightCol = Nleft ? COL_S : COL_N;
-    roundedRect(leftX, armTop, armW, armBot - armTop, 5); ctx.fillStyle = leftCol; ctx.fill();
-    roundedRect(rightX, armTop, armW, armBot - armTop, 5); ctx.fillStyle = rightCol; ctx.fill();
-    roundedRect(leftX, armBot - 4, (rightX + armW) - leftX, bot - armBot + 4, 6);
-    ctx.fillStyle = "#4b5361";
-    ctx.fill();
-    label(c.x - 36, armTop + 11, Nleft ? "N" : "S", 15, "#fff");
-    label(c.x + 36, armTop + 11, Nleft ? "S" : "N", 15, "#fff");
+    const s = c.flip;
+    label(c.x - s * 40, c.y - 50, "N", 14, "#1f2937");
+    label(c.x + s * 40, c.y - 50, "S", 14, "#1f2937");
   }
 
   function drawWire(c) {

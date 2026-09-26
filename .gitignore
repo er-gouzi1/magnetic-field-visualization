@@ -1,0 +1,10 @@
+# Local Python virtual environment
+.venv/
+
+# Generated demo screenshots
+shot_*.png
+
+# OS and editor noise
+.DS_Store
+Thumbs.db
+desktop.ini

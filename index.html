@@ -1,0 +1,1055 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>磁感线可视化 · 电磁学仿真实验</title>
+<style>
+  :root {
+    --bg: #edf0f4;
+    --panel: #ffffff;
+    --panel-2: #f7f8fa;
+    --border: #dfe3e9;
+    --border-strong: #c8ced8;
+    --text: #18202b;
+    --muted: #687386;
+    --blue: #2563eb;
+    --blue-soft: #eaf1ff;
+    --green: #17805d;
+    --green-soft: #e8f6f0;
+    --red: #d92d20;
+    --red-soft: #fdeceb;
+    --north: #d9363e;
+    --south: #2f6fed;
+    --metal: #5b6472;
+    --shadow: 0 10px 30px rgba(28, 35, 48, .08);
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    font-family: "Segoe UI", "Microsoft YaHei", system-ui, -apple-system, sans-serif;
+    color: var(--text);
+    background: var(--bg);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .app {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    min-height: 640px;
+  }
+
+  header.topbar {
+    height: 64px;
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 0 22px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+    z-index: 5;
+  }
+  .brand-mark {
+    width: 38px; height: 38px;
+    border-radius: 9px;
+    display: grid; place-items: center;
+    background: linear-gradient(135deg, #1f5fd0, #3b82f6);
+    color: #fff;
+    font-size: 21px;
+    font-weight: 700;
+    font-family: Georgia, serif;
+  }
+  .brand-text h1 {
+    margin: 0;
+    font-size: 17px;
+    font-weight: 700;
+    letter-spacing: 0;
+  }
+  .brand-text p {
+    margin: 1px 0 0;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .topbar .spacer { flex: 1; }
+  .topbar .tag {
+    font-size: 12px;
+    color: var(--muted);
+    border: 1px solid var(--border);
+    padding: 5px 10px;
+    border-radius: 999px;
+    background: var(--panel-2);
+  }
+
+  .layout {
+    flex: 1;
+    display: flex;
+    min-height: 0;
+  }
+
+  aside.sidebar {
+    width: 292px;
+    flex: 0 0 auto;
+    background: var(--panel);
+    border-right: 1px solid var(--border);
+    padding: 18px 16px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+  .side-section h2 {
+    margin: 0 0 10px;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: var(--muted);
+  }
+
+  .palette {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 9px;
+  }
+  .palette button {
+    border: 1px solid var(--border);
+    background: var(--panel-2);
+    border-radius: 8px;
+    padding: 10px 8px 8px;
+    cursor: pointer;
+    text-align: center;
+    transition: border-color .15s, box-shadow .15s, background .15s;
+    color: var(--text);
+  }
+  .palette button:hover { border-color: var(--border-strong); }
+  .palette button.active {
+    border-color: var(--blue);
+    background: var(--blue-soft);
+    box-shadow: 0 0 0 1px var(--blue) inset;
+  }
+  .palette svg { width: 52px; height: 38px; display: block; margin: 0 auto 6px; }
+  .palette .lbl { font-size: 12px; font-weight: 600; display: block; }
+
+  .controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+  }
+  .controls button {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    height: 58px;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 700;
+    color: #fff;
+    transition: filter .15s, transform .06s;
+  }
+  .controls button:active { transform: translateY(1px); }
+  .controls button svg { width: 18px; height: 18px; }
+  .btn-start { background: var(--green); }
+  .btn-add { background: var(--blue); }
+  .btn-end { background: var(--red); }
+  .controls button:disabled { opacity: .5; cursor: not-allowed; }
+
+  .tool-buttons {
+    display: flex;
+    gap: 8px;
+  }
+  .tool-buttons button {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 36px;
+    border: 1px solid var(--border);
+    background: var(--panel-2);
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .tool-buttons button:hover:not(:disabled) { background: #eef1f5; }
+  .tool-buttons button:disabled { opacity: .45; cursor: not-allowed; }
+  .tool-buttons svg { width: 15px; height: 15px; }
+
+  .theory {
+    font-size: 12.5px;
+    line-height: 1.55;
+    color: #3d4654;
+    border-top: 1px solid var(--border);
+    padding-top: 14px;
+  }
+  .theory .formula {
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: 8px 10px;
+    margin: 7px 0;
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 14px;
+    color: var(--text);
+    text-align: center;
+  }
+  .theory p { margin: 7px 0; }
+  .theory b { color: var(--text); }
+
+  main.stage {
+    flex: 1;
+    position: relative;
+    min-width: 0;
+    background:
+      radial-gradient(1100px 600px at 50% -10%, #fbfcfe 0%, #f1f3f7 60%, #e9edf2 100%);
+  }
+  canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    cursor: crosshair;
+  }
+
+  .stage-hint {
+    position: absolute;
+    top: 14px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(24, 32, 43, .82);
+    color: #fff;
+    font-size: 12.5px;
+    padding: 7px 14px;
+    border-radius: 999px;
+    pointer-events: none;
+    white-space: nowrap;
+    box-shadow: var(--shadow);
+  }
+
+  .toast {
+    position: absolute;
+    left: 50%;
+    bottom: 24px;
+    transform: translateX(-50%) translateY(8px);
+    background: rgba(24, 32, 43, .9);
+    color: #fff;
+    font-size: 13px;
+    padding: 9px 16px;
+    border-radius: 8px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .18s, transform .18s;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  @media (max-width: 860px) {
+    .app { min-height: 0; height: 100vh; }
+    .layout { flex-direction: column; }
+    aside.sidebar {
+      width: 100%;
+      flex: 0 0 auto;
+      flex-direction: row;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 12px 12px;
+      border-right: none;
+      border-bottom: 1px solid var(--border);
+      overflow-x: auto;
+    }
+    .side-section { min-width: 0; }
+    .side-section.palette-sec { flex: 0 0 210px; }
+    .side-section.control-sec { flex: 0 0 240px; }
+    .theory { display: none; }
+    header.topbar { height: 56px; padding: 0 14px; }
+    .topbar .tag { display: none; }
+  }
+</style>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand-mark">Φ</div>
+      <div class="brand-text">
+        <h1>磁感线可视化</h1>
+        <p>电磁学物理仿真实验</p>
+      </div>
+      <div class="spacer"></div>
+      <span class="tag">磁场叠加原理 · 右手螺旋定则</span>
+    </header>
+
+    <div class="layout">
+      <aside class="sidebar">
+        <section class="side-section palette-sec">
+          <h2>元件库</h2>
+          <div class="palette" id="palette"></div>
+        </section>
+
+        <section class="side-section control-sec">
+          <h2>实验控制</h2>
+          <div class="controls">
+            <button class="btn-start" id="btnStart" title="显示磁感线">
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+              开始
+            </button>
+            <button class="btn-add" id="btnAdd" title="添加所选元件">
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6z"/></svg>
+              添加
+            </button>
+            <button class="btn-end" id="btnEnd" title="清空并结束">
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h12v12H6z"/></svg>
+              结束
+            </button>
+          </div>
+          <div class="tool-buttons" style="margin-top:10px;">
+            <button id="btnFlip" disabled>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h13l-3-3M4 17h13l-3 3"/></svg>
+              翻转方向
+            </button>
+            <button id="btnDelete" disabled>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13"/></svg>
+              删除
+            </button>
+          </div>
+        </section>
+
+        <section class="theory side-section">
+          <h2>理论基础 · 电磁学</h2>
+          <p><b>磁场叠加原理：</b>空间某点的磁感应强度等于各电流元、磁极单独在该点产生的磁感应强度的矢量和。</p>
+          <div class="formula">B = B₁ + B₂ + ⋯ + Bₙ</div>
+          <p><b>磁感线：</b>假想的闭合曲线，切线方向为该点 B 的方向，疏密反映磁场强弱。磁体外部由 N 极指向 S 极，内部由 S 极指向 N 极。</p>
+          <p><b>右手螺旋定则：</b>右手握住通电直导线，拇指指向电流方向，四指弯曲方向即磁感线环绕方向。</p>
+          <p><b>通电螺线管：</b>内部近似匀强磁场，外部磁场与条形磁铁相似。</p>
+        </section>
+      </aside>
+
+      <main class="stage" id="stage">
+        <canvas id="canvas"></canvas>
+        <div class="stage-hint" id="hint">从左侧选择元件，点击画布放置 · 点击“开始”显示磁感线</div>
+        <div class="toast" id="toast"></div>
+      </main>
+    </div>
+  </div>
+
+<script>
+(function () {
+  "use strict";
+
+  const canvas = document.getElementById("canvas");
+  const ctx = canvas.getContext("2d");
+  const stage = document.getElementById("stage");
+  const hint = document.getElementById("hint");
+  const toastEl = document.getElementById("toast");
+  const paletteEl = document.getElementById("palette");
+  const btnStart = document.getElementById("btnStart");
+  const btnAdd = document.getElementById("btnAdd");
+  const btnEnd = document.getElementById("btnEnd");
+  const btnFlip = document.getElementById("btnFlip");
+  const btnDelete = document.getElementById("btnDelete");
+
+  const TYPES = [
+    { key: "bar", name: "条形磁铁" },
+    { key: "horseshoe", name: "马蹄形磁铁" },
+    { key: "solenoid", name: "通电螺线管" },
+    { key: "wire", name: "通电直导线" }
+  ];
+
+  const state = {
+    components: [],
+    selectedType: "bar",
+    selectedId: null,
+    fieldVisible: false,
+    dragging: null,
+    hoverId: null,
+    nextId: 1
+  };
+
+  // Physics tuning.
+  const K_DIPOLE = 1.0;
+  const K_WIRE = 0.020;
+  const EMIT_R = 7.0;
+  const POLE_R = 6.0;
+  const STEP = 3.4;
+  const MAX_STEPS = 3200;
+
+  let W = 0, H = 0, dpr = 1;
+  let activePoles = [];
+  let dbgLines = 0, dbgArrows = 0;
+
+  const COL_N = "#d9363e";
+  const COL_S = "#2f6fed";
+  const COL_METAL = "#5b6472";
+
+  /* ---------- helpers ---------- */
+  function dist(a, b) { return Math.hypot(a.x - b.x, a.y - b.y); }
+  function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+  function normAngle(a) { while (a < 0) a += Math.PI * 2; while (a >= Math.PI * 2) a -= Math.PI * 2; return a; }
+
+  function roundedRect(x, y, w, h, r) {
+    r = Math.min(r, w / 2, h / 2);
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+
+  function makeComponent(type, x, y) {
+    const id = state.nextId++;
+    if (type === "bar") return { id, type, x, y, length: 150, height: 34, flip: 1 };
+    if (type === "solenoid") return { id, type, x, y, length: 150, height: 46, flip: 1 };
+    if (type === "horseshoe") return { id, type, x, y, flip: 1 };
+    return { id, type, x, y, current: 1 };
+  }
+
+  function getPoles(c) {
+    if (c.type === "wire") return [];
+    if (c.type === "horseshoe") {
+      const s = c.flip;
+      return [
+        { x: c.x - s * 36, y: c.y - 38, charge: 1, outX: 0, outY: -1 },
+        { x: c.x + s * 36, y: c.y - 38, charge: -1 }
+      ];
+    }
+    // bar / solenoid
+    const s = c.flip;
+    const L = c.length;
+    return [
+      { x: c.x + s * L / 2, y: c.y, charge: 1, outX: s, outY: 0 },
+      { x: c.x - s * L / 2, y: c.y, charge: -1 }
+    ];
+  }
+
+  function fieldAt(x, y) {
+    let bx = 0, by = 0;
+    for (const c of state.components) {
+      if (c.type === "wire") {
+        const dx = x - c.x, dy = y - c.y;
+        const r2 = dx * dx + dy * dy;
+        if (r2 < 1e-8) continue;
+        const s = K_WIRE * c.current / r2;
+        bx += s * dy;
+        by += s * (-dx);
+      } else {
+        for (const p of getPoles(c)) {
+          const dx = x - p.x, dy = y - p.y;
+          const r2 = dx * dx + dy * dy;
+          if (r2 < 1e-8) continue;
+          const k = K_DIPOLE * p.charge / (r2 * Math.sqrt(r2));
+          bx += k * dx;
+          by += k * dy;
+        }
+      }
+    }
+    return { bx, by };
+  }
+
+  function dirAt(p) {
+    const f = fieldAt(p.x, p.y);
+    const m = Math.hypot(f.bx, f.by);
+    if (m < 1e-12) return null;
+    return { x: f.bx / m, y: f.by / m };
+  }
+
+  function rk4Step(p, sign) {
+    const h = STEP * sign;
+    const d1 = dirAt(p);
+    if (!d1) return null;
+    const p2 = { x: p.x + d1.x * h / 2, y: p.y + d1.y * h / 2 };
+    const d2 = dirAt(p2);
+    if (!d2) return { x: p.x + d1.x * h, y: p.y + d1.y * h };
+    const p3 = { x: p.x + d2.x * h / 2, y: p.y + d2.y * h / 2 };
+    const d3 = dirAt(p3);
+    if (!d3) return { x: p.x + d2.x * h, y: p.y + d2.y * h };
+    const p4 = { x: p.x + d3.x * h, y: p.y + d3.y * h };
+    const d4 = dirAt(p4);
+    if (!d4) return { x: p.x + d3.x * h, y: p.y + d3.y * h };
+    return {
+      x: p.x + h / 6 * (d1.x + 2 * d2.x + 2 * d3.x + d4.x),
+      y: p.y + h / 6 * (d1.y + 2 * d2.y + 2 * d3.y + d4.y)
+    };
+  }
+
+  function nearPole(p, r) {
+    for (const q of activePoles) {
+      if (dist(p, q) < r) return true;
+    }
+    return false;
+  }
+
+  function integrate(start, dir, forwardOnly) {
+    const pts = [{ x: start.x, y: start.y }];
+    let pos = { x: start.x, y: start.y };
+    let traveled = 0;
+    for (let i = 0; i < MAX_STEPS; i++) {
+      const np = rk4Step(pos, dir);
+      if (!np) break;
+      if (np.x < -40 || np.x > W + 40 || np.y < -40 || np.y > H + 40) break;
+      if (i > 3 && nearPole(np, POLE_R)) break;
+      const f = fieldAt(np.x, np.y);
+      if (Math.hypot(f.bx, f.by) < 1e-10) break;
+      traveled += dist(pos, np);
+      pts.push(np);
+      pos = np;
+      if (!forwardOnly && i > 12 && traveled > 90 && dist(pos, start) < 7.5) {
+        pts.push({ x: start.x, y: start.y });
+        return { pts, closed: true };
+      }
+    }
+    return { pts, closed: false };
+  }
+
+  function traceLine(seed) {
+    const fwd = integrate(seed, +1, seed.forwardOnly);
+    if (seed.forwardOnly) return { pts: fwd.pts, closed: false };
+    if (fwd.closed) return { pts: fwd.pts, closed: true };
+    const bwd = integrate(seed, -1, true);
+    const pts = bwd.pts.slice(0, -1).reverse().concat(fwd.pts);
+    return { pts, closed: false };
+  }
+
+  function computeFieldLines() {
+    activePoles = [];
+    for (const c of state.components) activePoles.push(...getPoles(c));
+    const lines = [];
+    const npoles = activePoles.filter(p => p.charge > 0);
+    const wires = state.components.filter(c => c.type === "wire");
+
+    const seedsPer = npoles.length ? Math.max(10, Math.round(22 / Math.sqrt(npoles.length))) : 0;
+    for (const p of npoles) {
+      const base = Math.atan2(p.outY, p.outX);
+      for (let i = 0; i < seedsPer; i++) {
+        const t = seedsPer === 1 ? 0.5 : i / (seedsPer - 1);
+        const ang = base - Math.PI / 2 + t * Math.PI;
+        const seed = {
+          x: p.x + EMIT_R * Math.cos(ang),
+          y: p.y + EMIT_R * Math.sin(ang),
+          forwardOnly: true
+        };
+        const res = traceLine(seed);
+        if (res.pts.length >= 3) lines.push(res);
+      }
+    }
+
+    const radii = wires.length > 1 ? [24, 54, 90, 132] : [24, 50, 80, 116, 158];
+    for (const w of wires) {
+      for (const r of radii) {
+        const seed = { x: w.x + r, y: w.y, forwardOnly: false };
+        const res = traceLine(seed);
+        if (res.pts.length >= 3) lines.push(res);
+      }
+    }
+    return lines;
+  }
+
+  /* ---------- drawing ---------- */
+  function drawGrid() {
+    ctx.strokeStyle = "rgba(120, 130, 148, .13)";
+    ctx.lineWidth = 1;
+    const step = 40;
+    ctx.beginPath();
+    for (let x = 0; x <= W; x += step) { ctx.moveTo(x + .5, 0); ctx.lineTo(x + .5, H); }
+    for (let y = 0; y <= H; y += step) { ctx.moveTo(0, y + .5); ctx.lineTo(W, y + .5); }
+    ctx.stroke();
+  }
+
+  function drawArrow(x, y, ang, color) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(ang);
+    ctx.beginPath();
+    ctx.moveTo(5.5, 0);
+    ctx.lineTo(-3.4, -2.9);
+    ctx.lineTo(-1.2, 0);
+    ctx.lineTo(-3.4, 2.9);
+    ctx.closePath();
+    ctx.fillStyle = color || "#000";
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function drawArrowsAlong(pts, spacing, color, minT, maxT) {
+    const total = pts.length - 1;
+    let acc = spacing * 0.55;
+    let drawn = 0;
+    for (let i = 0; i < total; i++) {
+      const a = pts[i], b = pts[i + 1];
+      const d = dist(a, b);
+      if (d < 1e-6) continue;
+      const t0 = i / total, t1 = (i + 1) / total;
+      while (acc <= d) {
+        const tt = t0 + (t1 - t0) * (acc / d);
+        if (tt >= (minT || 0) && tt <= (maxT || 1)) {
+          const x = a.x + (b.x - a.x) * (acc / d);
+          const y = a.y + (b.y - a.y) * (acc / d);
+          drawArrow(x, y, Math.atan2(b.y - a.y, b.x - a.x), color);
+          drawn++;
+        }
+        acc += spacing;
+      }
+      acc -= d;
+    }
+    return drawn;
+  }
+
+  function drawFieldLines(lines) {
+    ctx.lineWidth = 1.6;
+    ctx.strokeStyle = "#000";
+    ctx.lineJoin = "round";
+    ctx.lineCap = "round";
+    dbgLines = lines.length;
+    dbgArrows = 0;
+    for (const line of lines) {
+      const pts = line.pts;
+      ctx.beginPath();
+      ctx.moveTo(pts[0].x, pts[0].y);
+      for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+      ctx.stroke();
+      dbgArrows += drawArrowsAlong(pts, 46, "#000", 0.04, 0.97);
+    }
+  }
+
+  function label(x, y, txt, size, color, weight) {
+    ctx.fillStyle = color;
+    ctx.font = (weight || 700) + " " + size + "px 'Segoe UI','Microsoft YaHei',sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(txt, x, y);
+  }
+
+  function drawBar(c) {
+    const L = c.length, h = c.height;
+    const x = c.x - L / 2, y = c.y - h / 2;
+    const Nright = c.flip > 0;
+    roundedRect(x, y, L / 2, h, 6);
+    ctx.fillStyle = Nright ? COL_S : COL_N;
+    ctx.fill();
+    roundedRect(x + L / 2, y, L / 2, h, 6);
+    ctx.fillStyle = Nright ? COL_N : COL_S;
+    ctx.fill();
+    label(x + L / 4, c.y + 1, Nright ? "S" : "N", 16, "#fff");
+    label(x + L * 3 / 4, c.y + 1, Nright ? "N" : "S", 16, "#fff");
+  }
+
+  function drawSolenoid(c) {
+    const L = c.length, h = c.height;
+    const x = c.x - L / 2, y = c.y - h / 2;
+    const Nright = c.flip > 0;
+    roundedRect(x, y, L, h, 9);
+    ctx.fillStyle = "#d5d9df";
+    ctx.fill();
+    ctx.strokeStyle = COL_METAL;
+    ctx.lineWidth = 1.4;
+    ctx.stroke();
+    // windings
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = COL_METAL;
+    ctx.beginPath();
+    for (let wx = x + 8; wx <= x + L - 8; wx += 11) {
+      ctx.moveTo(wx, y + 5);
+      ctx.lineTo(wx, y + h - 5);
+    }
+    ctx.stroke();
+    // current arrows along top (S->N direction) and bottom (N->S return)
+    const topDir = Nright ? 1 : -1;
+    ctx.fillStyle = COL_METAL;
+    for (let ax = x + 18; ax < x + L - 18; ax += 34) {
+      drawArrow(ax, y + 11, topDir > 0 ? 0 : Math.PI, COL_METAL);
+      drawArrow(ax, y + h - 11, topDir > 0 ? Math.PI : 0, COL_METAL);
+    }
+    label(x + 18, c.y + 1, Nright ? "S" : "N", 14, "#3a4350");
+    label(x + L - 18, c.y + 1, Nright ? "N" : "S", 14, "#3a4350");
+  }
+
+  function drawHorseshoe(c) {
+    const Nleft = c.flip > 0;
+    const armW = 22, armTop = c.y - 38, armBot = c.y + 26, bot = c.y + 48;
+    const leftX = c.x - 36 - armW / 2, rightX = c.x + 36 - armW / 2;
+    const leftCol = Nleft ? COL_N : COL_S;
+    const rightCol = Nleft ? COL_S : COL_N;
+    // arms
+    roundedRect(leftX, armTop, armW, armBot - armTop, 5); ctx.fillStyle = leftCol; ctx.fill();
+    roundedRect(rightX, armTop, armW, armBot - armTop, 5); ctx.fillStyle = rightCol; ctx.fill();
+    // bottom bar
+    roundedRect(leftX, armBot - 4, (rightX + armW) - leftX, bot - armBot + 4, 6);
+    ctx.fillStyle = "#4b5361";
+    ctx.fill();
+    label(c.x - 36, armTop + 11, Nleft ? "N" : "S", 15, "#fff");
+    label(c.x + 36, armTop + 11, Nleft ? "S" : "N", 15, "#fff");
+  }
+
+  function drawWire(c) {
+    ctx.beginPath();
+    ctx.arc(c.x, c.y, 12, 0, Math.PI * 2);
+    ctx.fillStyle = COL_METAL;
+    ctx.fill();
+    ctx.lineWidth = 1.6;
+    ctx.strokeStyle = "#3f4855";
+    ctx.stroke();
+    if (c.current > 0) {
+      ctx.beginPath();
+      ctx.arc(c.x, c.y, 4, 0, Math.PI * 2);
+      ctx.fillStyle = "#fff";
+      ctx.fill();
+    } else {
+      ctx.strokeStyle = "#fff";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(c.x - 4, c.y - 4); ctx.lineTo(c.x + 4, c.y + 4);
+      ctx.moveTo(c.x + 4, c.y - 4); ctx.lineTo(c.x - 4, c.y + 4);
+      ctx.stroke();
+    }
+  }
+
+  function drawInternalLines() {
+    for (const c of state.components) {
+      if (c.type === "bar" || c.type === "solenoid") {
+        const s = c.flip;
+        const L = c.length;
+        const x0 = c.x - s * L / 2 + s * 12;
+        const x1 = c.x + s * L / 2 - s * 12;
+        const ys = [c.y - 8, c.y, c.y + 8];
+        ctx.lineWidth = 1.4;
+        ctx.strokeStyle = "rgba(0,0,0,.62)";
+        for (const yy of ys) {
+          ctx.beginPath();
+          ctx.moveTo(x0, yy);
+          ctx.lineTo(x1, yy);
+          ctx.stroke();
+        }
+        const ang = s > 0 ? 0 : Math.PI;
+        for (const yy of ys) drawArrow((x0 + x1) / 2, yy, ang, "#111");
+      } else if (c.type === "horseshoe") {
+        const s = c.flip;
+        const sx = c.x + s * 36;
+        const nx = c.x - s * 36;
+        const yTop = c.y - 30, yBot = c.y + 34;
+        ctx.lineWidth = 1.4;
+        ctx.strokeStyle = "rgba(0,0,0,.62)";
+        ctx.beginPath();
+        ctx.moveTo(sx, yTop);
+        ctx.lineTo(sx, yBot);
+        ctx.lineTo(nx, yBot);
+        ctx.lineTo(nx, yTop);
+        ctx.stroke();
+        drawArrow(sx, yTop + 24, Math.PI / 2, "#111");
+        drawArrow((sx + nx) / 2, yBot, s > 0 ? Math.PI : 0, "#111");
+        drawArrow(nx, yTop + 24, -Math.PI / 2, "#111");
+      }
+    }
+  }
+
+  function hitTest(pos) {
+    for (let i = state.components.length - 1; i >= 0; i--) {
+      const c = state.components[i];
+      if (c.type === "wire") {
+        if (dist(pos, c) < 16) return c;
+      } else if (c.type === "horseshoe") {
+        if (pos.x >= c.x - 47 && pos.x <= c.x + 47 && pos.y >= c.y - 40 && pos.y <= c.y + 50) return c;
+      } else {
+        const L = c.length, h = c.height;
+        if (pos.x >= c.x - L / 2 - 2 && pos.x <= c.x + L / 2 + 2 && pos.y >= c.y - h / 2 - 2 && pos.y <= c.y + h / 2 + 2) return c;
+      }
+    }
+    return null;
+  }
+
+  function drawSelection(c) {
+    ctx.save();
+    ctx.strokeStyle = "#2563eb";
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([6, 4]);
+    if (c.type === "wire") {
+      ctx.beginPath();
+      ctx.arc(c.x, c.y, 18, 0, Math.PI * 2);
+      ctx.stroke();
+    } else if (c.type === "horseshoe") {
+      roundedRect(c.x - 51, c.y - 44, 102, 98, 8);
+      ctx.stroke();
+    } else {
+      roundedRect(c.x - c.length / 2 - 6, c.y - c.height / 2 - 6, c.length + 12, c.height + 12, 10);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function render() {
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+    drawGrid();
+
+    let lines = [];
+    if (state.fieldVisible && state.components.length) {
+      lines = computeFieldLines();
+      drawFieldLines(lines);
+    }
+
+    for (const c of state.components) {
+      if (c.id === state.selectedId) continue;
+      if (c.type === "bar") drawBar(c);
+      else if (c.type === "solenoid") drawSolenoid(c);
+      else if (c.type === "horseshoe") drawHorseshoe(c);
+      else drawWire(c);
+    }
+    const sel = getSelected();
+    if (sel) {
+      if (sel.type === "bar") drawBar(sel);
+      else if (sel.type === "solenoid") drawSolenoid(sel);
+      else if (sel.type === "horseshoe") drawHorseshoe(sel);
+      else drawWire(sel);
+    }
+
+    drawInternalLines();
+    if (sel) drawSelection(sel);
+
+    updateHint();
+  }
+
+  function getSelected() {
+    return state.components.find(c => c.id === state.selectedId) || null;
+  }
+
+  function updateHint() {
+    const n = state.components.length;
+    if (n === 0) {
+      hint.textContent = "从左侧选择元件，点击画布放置 · 点击“开始”显示磁感线";
+    } else if (state.fieldVisible) {
+      const sel = getSelected();
+      hint.textContent = "已显示磁感线 · 元件 " + n + " 个 · " +
+        (sel ? "当前选中：" + typeName(sel.type) + "（拖动移动，双击翻转）" : "可拖动元件调整位置");
+    } else {
+      hint.textContent = "已放置元件 " + n + " 个 · 点击“开始”计算磁感线";
+    }
+    btnFlip.disabled = !getSelected();
+    btnDelete.disabled = !getSelected();
+  }
+
+  function typeName(t) {
+    const f = TYPES.find(x => x.key === t);
+    return f ? f.name : t;
+  }
+
+  function showToast(msg) {
+    toastEl.textContent = msg;
+    toastEl.classList.add("show");
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(() => toastEl.classList.remove("show"), 1700);
+  }
+
+  /* ---------- interactions ---------- */
+  function canvasPos(e) {
+    const r = canvas.getBoundingClientRect();
+    return { x: e.clientX - r.left, y: e.clientY - r.top };
+  }
+
+  function select(id) {
+    state.selectedId = id;
+  }
+
+  function flipComponent(c) {
+    if (c.type === "wire") c.current *= -1;
+    else c.flip *= -1;
+  }
+
+  function addComponent(type, x, y) {
+    const c = makeComponent(type, clamp(x, 60, W - 60), clamp(y, 50, H - 50));
+    state.components.push(c);
+    state.selectedId = c.id;
+  }
+
+  function removeComponent(id) {
+    state.components = state.components.filter(c => c.id !== id);
+    if (state.selectedId === id) state.selectedId = null;
+  }
+
+  canvas.addEventListener("pointerdown", (e) => {
+    const pos = canvasPos(e);
+    const hit = hitTest(pos);
+    if (hit) {
+      select(hit.id);
+      state.dragging = { id: hit.id, dx: hit.x - pos.x, dy: hit.y - pos.y };
+      canvas.setPointerCapture(e.pointerId);
+      canvas.style.cursor = "grabbing";
+    } else if (state.selectedType) {
+      addComponent(state.selectedType, pos.x, pos.y);
+      const c = getSelected();
+      state.dragging = { id: c.id, dx: 0, dy: 0 };
+      canvas.setPointerCapture(e.pointerId);
+      canvas.style.cursor = "grabbing";
+    }
+    render();
+  });
+
+  canvas.addEventListener("pointermove", (e) => {
+    const pos = canvasPos(e);
+    if (state.dragging) {
+      const c = state.components.find(x => x.id === state.dragging.id);
+      if (c) {
+        c.x = clamp(pos.x + state.dragging.dx, 50, W - 50);
+        c.y = clamp(pos.y + state.dragging.dy, 40, H - 40);
+        render();
+      }
+    } else {
+      const hit = hitTest(pos);
+      canvas.style.cursor = hit ? "grab" : "crosshair";
+    }
+  });
+
+  function endDrag(e) {
+    if (state.dragging) {
+      state.dragging = null;
+      canvas.style.cursor = "crosshair";
+      try { canvas.releasePointerCapture(e.pointerId); } catch (_) {}
+      render();
+    }
+  }
+  canvas.addEventListener("pointerup", endDrag);
+  canvas.addEventListener("pointercancel", endDrag);
+
+  canvas.addEventListener("dblclick", (e) => {
+    const pos = canvasPos(e);
+    const hit = hitTest(pos);
+    if (hit) {
+      flipComponent(hit);
+      render();
+    }
+  });
+
+  window.addEventListener("keydown", (e) => {
+    if (e.key === "Delete" || e.key === "Backspace") {
+      const sel = getSelected();
+      if (sel && document.activeElement === document.body) {
+        e.preventDefault();
+        removeComponent(sel.id);
+        render();
+      }
+    } else if (e.key === "Escape") {
+      state.selectedId = null;
+      render();
+    } else if (e.key === "f" || e.key === "F") {
+      const sel = getSelected();
+      if (sel) { flipComponent(sel); render(); }
+    }
+  });
+
+  /* ---------- palette & controls ---------- */
+  function buildPalette() {
+    paletteEl.innerHTML = "";
+    for (const t of TYPES) {
+      const b = document.createElement("button");
+      b.dataset.key = t.key;
+      b.innerHTML = iconFor(t.key) + '<span class="lbl">' + t.name + "</span>";
+      b.addEventListener("click", () => {
+        state.selectedType = t.key;
+        refreshPalette();
+      });
+      paletteEl.appendChild(b);
+    }
+    refreshPalette();
+  }
+
+  function iconFor(key) {
+    if (key === "bar") {
+      return '<svg viewBox="0 0 56 30"><rect x="2" y="7" width="26" height="16" rx="4" fill="#2f6fed"/><rect x="28" y="7" width="26" height="16" rx="4" fill="#d9363e"/></svg>';
+    }
+    if (key === "horseshoe") {
+      return '<svg viewBox="0 0 56 44"><path d="M14 8v14a14 14 0 0 0 28 0V8" fill="none" stroke="#4b5361" stroke-width="9"/><rect x="6" y="6" width="16" height="14" rx="3" fill="#d9363e"/><rect x="34" y="6" width="16" height="14" rx="3" fill="#2f6fed"/></svg>';
+    }
+    if (key === "solenoid") {
+      return '<svg viewBox="0 0 56 34"><rect x="3" y="8" width="50" height="18" rx="6" fill="#d5d9df" stroke="#5b6472" stroke-width="1.5"/><path d="M9 11v12M16 11v12M23 11v12M30 11v12M37 11v12M44 11v12" stroke="#5b6472" stroke-width="1.5"/></svg>';
+    }
+    return '<svg viewBox="0 0 56 44"><circle cx="28" cy="22" r="13" fill="#5b6472"/><circle cx="28" cy="22" r="4.5" fill="#fff"/></svg>';
+  }
+
+  function refreshPalette() {
+    for (const b of paletteEl.querySelectorAll("button")) {
+      b.classList.toggle("active", b.dataset.key === state.selectedType);
+    }
+  }
+
+  btnStart.addEventListener("click", () => {
+    if (!state.components.length) {
+      showToast("请先添加元件");
+      return;
+    }
+    state.fieldVisible = true;
+    render();
+    showToast("已显示叠加后的磁感线分布");
+  });
+
+  btnAdd.addEventListener("click", () => {
+    const n = state.components.length;
+    let x = W / 2, y = H / 2;
+    if (n > 0) {
+      const k = (n - 1) % 4;
+      const ring = Math.floor((n - 1) / 4) + 1;
+      const a = [0, Math.PI / 2, Math.PI, 3 * Math.PI / 2][k];
+      const r = 165 * ring;
+      x += r * Math.cos(a);
+      y += r * Math.sin(a);
+    }
+    addComponent(state.selectedType, x, y);
+    render();
+  });
+
+  btnEnd.addEventListener("click", () => {
+    state.components = [];
+    state.selectedId = null;
+    state.fieldVisible = false;
+    state.dragging = null;
+    render();
+    showToast("已结束并清空演示区域");
+  });
+
+  btnFlip.addEventListener("click", () => {
+    const sel = getSelected();
+    if (sel) { flipComponent(sel); render(); }
+  });
+
+  btnDelete.addEventListener("click", () => {
+    const sel = getSelected();
+    if (sel) { removeComponent(sel.id); render(); }
+  });
+
+  /* ---------- init ---------- */
+  function resize() {
+    const r = stage.getBoundingClientRect();
+    W = Math.max(320, r.width);
+    H = Math.max(320, r.height);
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.round(W * dpr);
+    canvas.height = Math.round(H * dpr);
+    canvas.style.width = W + "px";
+    canvas.style.height = H + "px";
+    render();
+  }
+
+  buildPalette();
+  window.addEventListener("resize", resize);
+  resize();
+
+  window.__simStats = () => ({
+    lines: dbgLines,
+    arrows: dbgArrows,
+    components: state.components.length,
+    fieldVisible: state.fieldVisible
+  });
+
+  // Preload one bar magnet for an immediate, discoverable start.
+  addComponent("bar", W / 2, H / 2);
+  state.selectedId = null;
+  render();
+})();
+</script>
+</body>
+</html>

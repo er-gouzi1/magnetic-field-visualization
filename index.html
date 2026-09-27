@@ -729,6 +729,7 @@
     const img = assets.solenoid;
     if (img.complete && img.naturalWidth) {
       drawSprite(img, c.x, c.y, c.length, c.height, c.flip < 0, c.angle || 0);
+      drawSolenoidCurrent(c);
       return;
     }
 
@@ -752,6 +753,44 @@
       ctx.lineTo(wx, y + h - 5);
     }
     ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawSolenoidCurrent(c) {
+    const imgW = 760, imgH = 241;
+    const coilStart = 152;
+    const turnCount = 9;
+    const coilPitch = 624 / turnCount;
+    const coilRy = 108;
+    const coilCy = 178;
+    const turnIndexes = [1, 4, 6, 8];
+
+    ctx.save();
+    ctx.translate(c.x, c.y);
+    ctx.rotate((c.angle || 0) * Math.PI / 180);
+    if (c.flip < 0) ctx.scale(-1, 1);
+
+    ctx.strokeStyle = "#444b55";
+    ctx.fillStyle = "#444b55";
+    ctx.lineWidth = 1.8;
+    ctx.lineCap = "round";
+
+    for (const turn of turnIndexes) {
+      const imgX = coilStart + coilPitch * (turn + 0.25);
+      const imgY = coilCy;
+      const x = (imgX / imgW - 0.5) * c.length;
+      const y = (imgY / imgH - 0.5) * c.height;
+      const angle = Math.atan2(
+        coilRy * c.height / imgH,
+        (coilPitch / Math.PI) * c.length / imgW
+      );
+      const tail = 7;
+      ctx.beginPath();
+      ctx.moveTo(x - Math.cos(angle) * tail, y - Math.sin(angle) * tail);
+      ctx.lineTo(x, y);
+      ctx.stroke();
+      drawArrow(x, y, angle, "#444b55");
+    }
     ctx.restore();
   }
 
@@ -955,7 +994,7 @@
 
   function drawInternalLines() {
     for (const c of state.components) {
-      if (c.type === "bar" || c.type === "solenoid") {
+      if (c.type === "bar") {
         const s = c.flip;
         const L = c.length;
         ctx.save();

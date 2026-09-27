@@ -15,6 +15,10 @@ INK = (45, 45, 52)
 WHITE = (255, 255, 255)
 
 
+def scaled(values, scale):
+    return tuple(round(value * scale) for value in values)
+
+
 def trim_transparent(img, pad=6):
     bbox = img.getchannel("A").getbbox()
     if bbox is None:
@@ -104,6 +108,155 @@ def horseshoe_magnet():
     print("saved", path)
 
 
+def solenoid_schematic():
+    scale = 4
+    W, H = 960, 500
+    img = Image.new("RGBA", (W * scale, H * scale), (255, 255, 255, 0))
+    d = ImageDraw.Draw(img)
+
+    line = (82, 87, 94, 255)
+    body_left, body_right = 118, 810
+    body_top, body_bottom = 88, 268
+    body_cy = (body_top + body_bottom) // 2
+    end_rx, end_ry = 25, (body_bottom - body_top) // 2
+
+    # Light grey cylinder with a restrained lower shade, matching the clean
+    # line-art look of a textbook current-carrying solenoid.
+    d.rectangle(
+        scaled((body_left, body_top, body_right, body_bottom), scale),
+        fill=(235, 236, 238, 255),
+    )
+    d.rectangle(
+        scaled((body_left, body_cy + 38, body_right, body_bottom), scale),
+        fill=(201, 204, 208, 255),
+    )
+    d.ellipse(
+        scaled((body_left - end_rx, body_top, body_left + end_rx, body_bottom), scale),
+        fill=(247, 248, 249, 255),
+    )
+    d.ellipse(
+        scaled((body_right - end_rx, body_top, body_right + end_rx, body_bottom), scale),
+        fill=(207, 210, 214, 255),
+    )
+
+    # Project a real helix around the cylinder. Rear segments are laid down
+    # first and partly hidden by the cylinder; front segments are added later.
+    coil_start, coil_end = body_left + 34, body_right - 34
+    turn_count = 9
+    samples_per_turn = 72
+    coil_pitch = (coil_end - coil_start) / turn_count
+    coil_ry = 108
+    front_segments = []
+    rear_segments = []
+    front_segment = []
+    rear_segment = []
+
+    for step in range(turn_count * samples_per_turn + 1):
+        theta = math.tau * step / samples_per_turn
+        x = coil_start + coil_pitch * step / samples_per_turn
+        y = body_cy - coil_ry * math.cos(theta)
+        point = (round(x * scale), round(y * scale))
+        depth = math.sin(theta)
+        if depth >= 0:
+            if rear_segment:
+                rear_segments.append(rear_segment)
+                rear_segment = []
+            front_segment.append(point)
+        else:
+            if front_segment:
+                front_segments.append(front_segment)
+                front_segment = []
+            rear_segment.append(point)
+
+    if front_segment:
+        front_segments.append(front_segment)
+    if rear_segment:
+        rear_segments.append(rear_segment)
+
+    for segment in rear_segments:
+        d.line(
+            segment,
+            fill=(166, 170, 176, 255),
+            width=8 * scale,
+            joint="curve",
+        )
+        d.line(
+            segment,
+            fill=(220, 222, 226, 255),
+            width=2 * scale,
+            joint="curve",
+        )
+
+    # Repaint the cylinder over the rear winding so only the portions that
+    # pass above or below the body remain visible.
+    d.rectangle(
+        scaled((body_left, body_top, body_right, body_bottom), scale),
+        fill=(235, 236, 238, 255),
+    )
+    d.rectangle(
+        scaled((body_left, body_cy + 38, body_right, body_bottom), scale),
+        fill=(201, 204, 208, 255),
+    )
+    d.ellipse(
+        scaled((body_left - end_rx, body_top, body_left + end_rx, body_bottom), scale),
+        fill=(247, 248, 249, 255),
+    )
+    d.ellipse(
+        scaled((body_right - end_rx, body_top, body_right + end_rx, body_bottom), scale),
+        fill=(207, 210, 214, 255),
+    )
+
+    # Cylinder outline, left opening, and right rounded end.
+    d.line(
+        [
+            (body_left * scale, body_top * scale),
+            (body_right * scale, body_top * scale),
+        ],
+        fill=line,
+        width=4 * scale,
+    )
+    d.line(
+        [
+            (body_left * scale, body_bottom * scale),
+            (body_right * scale, body_bottom * scale),
+        ],
+        fill=line,
+        width=4 * scale,
+    )
+    d.ellipse(
+        scaled((body_left - end_rx, body_top, body_left + end_rx, body_bottom), scale),
+        outline=line,
+        width=4 * scale,
+    )
+    d.arc(
+        scaled((body_right - end_rx, body_top, body_right + end_rx, body_bottom), scale),
+        -90,
+        90,
+        fill=line,
+        width=4 * scale,
+    )
+
+    for segment in front_segments:
+        d.line(
+            segment,
+            fill=(70, 76, 84, 255),
+            width=9 * scale,
+            joint="curve",
+        )
+        d.line(
+            segment,
+            fill=(146, 152, 160, 255),
+            width=3 * scale,
+            joint="curve",
+        )
+
+    img = img.resize((W, H), Image.Resampling.LANCZOS)
+    path = os.path.join(OUT, "solenoid_schematic.png")
+    trim_transparent(img).save(path)
+    print("saved", path)
+
+
 if __name__ == "__main__":
     bar_magnet()
     horseshoe_magnet()
+    solenoid_schematic()

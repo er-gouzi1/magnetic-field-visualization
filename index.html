@@ -474,9 +474,11 @@
     if (c.type === "horseshoe") {
       const rN = rotateOffset(-s * 40, -50, a);
       const rS = rotateOffset(s * 40, -50, a);
+      const outX = Math.sin(a * Math.PI / 180);
+      const outY = -Math.cos(a * Math.PI / 180);
       return [
-        { x: c.x + rN.x, y: c.y + rN.y, charge: 1, outX: Math.sin(a * Math.PI / 180), outY: -Math.cos(a * Math.PI / 180) },
-        { x: c.x + rS.x, y: c.y + rS.y, charge: -1 }
+        { x: c.x + rN.x, y: c.y + rN.y, charge: 1, outX, outY },
+        { x: c.x + rS.x, y: c.y + rS.y, charge: -1, outX, outY }
       ];
     }
     // bar / solenoid
@@ -484,9 +486,11 @@
     const rad = a * Math.PI / 180;
     const rN = rotateOffset(s * L / 2, 0, a);
     const rS = rotateOffset(-s * L / 2, 0, a);
+    const outX = s * Math.cos(rad);
+    const outY = s * Math.sin(rad);
     return [
-      { x: c.x + rN.x, y: c.y + rN.y, charge: 1, outX: s * Math.cos(rad), outY: s * Math.sin(rad) },
-      { x: c.x + rS.x, y: c.y + rS.y, charge: -1 }
+      { x: c.x + rN.x, y: c.y + rN.y, charge: 1, outX, outY },
+      { x: c.x + rS.x, y: c.y + rS.y, charge: -1, outX: -outX, outY: -outY }
     ];
   }
 
@@ -585,6 +589,7 @@
     for (const c of state.components) activePoles.push(...getPoles(c));
     const lines = [];
     const npoles = activePoles.filter(p => p.charge > 0);
+    const spoles = activePoles.filter(p => p.charge < 0);
     const wires = state.components.filter(c => c.type === "wire" && (c.dir === 0 || c.dir === 2));
 
     const seedsPer = npoles.length ? Math.max(10, Math.round(22 / Math.sqrt(npoles.length))) : 0;
@@ -600,6 +605,51 @@
         };
         const res = traceLine(seed);
         if (res.pts.length >= 3) lines.push(res);
+      }
+    }
+
+    // Seed from S-pole outward directions and trace backwards. Lines that
+    // return to an N pole are already covered by the source seeds above.
+    const sinkSeedsPer = spoles.length ? Math.max(8, Math.round(14 / Math.sqrt(spoles.length))) : 0;
+    for (const p of spoles) {
+      const base = Math.atan2(p.outY, p.outX);
+      for (let i = 0; i < sinkSeedsPer; i++) {
+        const t = sinkSeedsPer === 1 ? 0.5 : i / (sinkSeedsPer - 1);
+        const ang = base - Math.PI / 2 + t * Math.PI;
+        const seed = {
+          x: p.x + EMIT_R * Math.cos(ang),
+          y: p.y + EMIT_R * Math.sin(ang)
+        };
+        const res = integrate(seed, -1, true);
+        if (res.pts.length < 3) continue;
+        const upstream = res.pts[res.pts.length - 1];
+        if (npoles.some(q => dist(upstream, q) < POLE_R + 18)) continue;
+        lines.push({ pts: res.pts.slice().reverse(), closed: false });
+      }
+    }
+
+    // Add lateral seeds along bar magnets so the space immediately above and
+    // below the body is populated by complete N-to-S field lines.
+    const bars = state.components.filter(c => c.type === "bar");
+    const lateralOffsets = bars.length <= 2
+      ? [-0.36, -0.18, 0, 0.18, 0.36]
+      : [-0.28, 0, 0.28];
+    for (const bar of bars) {
+      const sideDistance = bar.height / 2 + 18;
+      for (const ySide of [-sideDistance, sideDistance]) {
+        for (const xRatio of lateralOffsets) {
+          const offset = rotateOffset(
+            xRatio * bar.length,
+            ySide,
+            bar.angle || 0
+          );
+          const seed = {
+            x: bar.x + offset.x,
+            y: bar.y + offset.y
+          };
+          const res = traceLine(seed);
+          if (res.pts.length >= 3) lines.push(res);
+        }
       }
     }
 

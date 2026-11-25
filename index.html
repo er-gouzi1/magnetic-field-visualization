@@ -1191,8 +1191,9 @@
       const yaw = ((c.yaw || 0) % 360 + 360) % 360;
       const direction = c.flip * (yaw === 180 ? -1 : 1);
       const L = c.length;
-      const x0 = -L / 2 + 10;
-      const x1 = L / 2 - 10;
+      const outerExtension = 70;
+      const x0 = -L / 2 - outerExtension;
+      const x1 = L / 2 + outerExtension;
 
       ctx.save();
       ctx.translate(c.x, c.y);
@@ -1207,7 +1208,7 @@
       ctx.stroke();
 
       const angle = direction > 0 ? 0 : Math.PI;
-      for (const x of [-L * 0.24, L * 0.24]) {
+      for (const x of [-L / 2 - 34, -L * 0.24, L * 0.24, L / 2 + 34]) {
         drawArrow(x, 0, angle, "#111");
       }
       ctx.restore();

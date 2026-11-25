@@ -896,8 +896,8 @@
     ctx.stroke();
 
     // Current direction on the visible front winding.
-    ctx.strokeStyle = "#3f4650";
-    ctx.fillStyle = "#3f4650";
+    ctx.strokeStyle = COL_N;
+    ctx.fillStyle = COL_N;
     ctx.lineWidth = 2.5;
     for (let i = 0; i < 4; i++) {
       const theta = Math.PI / 4 + i * Math.PI / 2;
@@ -909,7 +909,7 @@
       ctx.moveTo(x - Math.cos(angle) * tail, y - Math.sin(angle) * tail);
       ctx.lineTo(x, y);
       ctx.stroke();
-      drawArrow(x, y, angle, "#3f4650", 1.65);
+      drawArrow(x, y, angle, COL_N, 1.65);
     }
 
     if (state.fieldVisible) {

@@ -1185,6 +1185,35 @@
     }
   }
 
+  function drawSolenoidAxisFieldLines() {
+    for (const c of state.components) {
+      if (c.type !== "solenoid" || solenoidIsEndOn(c)) continue;
+      const yaw = ((c.yaw || 0) % 360 + 360) % 360;
+      const direction = c.flip * (yaw === 180 ? -1 : 1);
+      const L = c.length;
+      const x0 = -L / 2 + 10;
+      const x1 = L / 2 - 10;
+
+      ctx.save();
+      ctx.translate(c.x, c.y);
+      ctx.rotate((c.angle || 0) * Math.PI / 180);
+      ctx.strokeStyle = "#111";
+      ctx.fillStyle = "#111";
+      ctx.lineWidth = 1.6;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(x0, 0);
+      ctx.lineTo(x1, 0);
+      ctx.stroke();
+
+      const angle = direction > 0 ? 0 : Math.PI;
+      for (const x of [-L * 0.24, L * 0.24]) {
+        drawArrow(x, 0, angle, "#111");
+      }
+      ctx.restore();
+    }
+  }
+
   function hitTest(pos) {
     for (let i = state.components.length - 1; i >= 0; i--) {
       const c = state.components[i];
@@ -1286,6 +1315,7 @@
     }
 
     drawInternalLines();
+    if (state.fieldVisible) drawSolenoidAxisFieldLines();
     if (state.fieldVisible) drawWireFieldSymbols();
     if (sel) drawSelection(sel);
     drawGaussReadings();
